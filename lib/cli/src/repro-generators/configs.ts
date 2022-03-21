@@ -14,6 +14,8 @@ export interface Parameters {
   additionalDeps?: string[];
   /** Add typescript dependency and creates a tsconfig.json file */
   typescript?: boolean;
+  /** Merge configurations to main.js before running the tests */
+  mainOverwrites?: Record<string, any>;
 }
 
 const fromDeps = (...args: string[]): string =>
@@ -41,6 +43,11 @@ export const cra: Parameters = {
     'echo "FAST_REFRESH=true" > .env',
     'echo "SKIP_PREFLIGHT_CHECK=true" > .env',
   ].join(' && '),
+  mainOverwrites: {
+    features: {
+      interactionsDebugger: true,
+    },
+  },
 };
 
 export const cra_typescript: Parameters = {

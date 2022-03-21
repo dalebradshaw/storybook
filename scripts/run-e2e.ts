@@ -1,5 +1,5 @@
 import path from 'path';
-import { ensureDir, pathExists, remove } from 'fs-extra';
+import { ensureDir, pathExists, remove, readFile, writeFile } from 'fs-extra';
 import prompts from 'prompts';
 
 import program from 'commander';
@@ -16,6 +16,7 @@ const logger = console;
 export interface Options {
   /** CLI repro template to use  */
   name: string;
+  mainOverwrites?: Parameters['mainOverwrites'];
   /** Pre-build hook */
   ensureDir?: boolean;
   cwd?: string;
@@ -34,6 +35,20 @@ const prepareDirectory = async ({ cwd }: Options): Promise<boolean> => {
 
 const cleanDirectory = async ({ cwd }: Options): Promise<void> => {
   await remove(cwd);
+};
+
+const overwriteMainConfig = async ({ cwd, mainOverwrites }: Options) => {
+  // @TODO: make this smarter and handle ts files
+  logger.info(`📝 Overwriting main.js with the following configuration:`);
+  logger.debug(mainOverwrites);
+  const mainConfigPath = path.join(cwd, '.storybook/main.js');
+  const mainJs = await (await readFile(mainConfigPath)).toString();
+  const newConfig = {
+    ...JSON.parse(mainJs),
+    ...mainOverwrites,
+  };
+
+  await writeFile(mainConfigPath, JSON.stringify(newConfig, null, 2));
 };
 
 const buildStorybook = async ({ cwd }: Options) => {
@@ -105,6 +120,12 @@ const runTests = async ({ name, ...rest }: Parameters) => {
         errorMessage: `🚨 Unable to bootstrap project`,
       }
     );
+
+    if (options.mainOverwrites) {
+      await overwriteMainConfig(options);
+    }
+    console.log('quitting!');
+    process.exit(0);
 
     await buildStorybook(options);
     logger.log();
