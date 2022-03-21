@@ -1,5 +1,5 @@
 import dedent from 'ts-dedent';
-import { resolve } from 'path';
+import { resolve, relative } from 'path';
 import { logger } from '@storybook/node-logger';
 import resolveFrom from 'resolve-from';
 import {
@@ -12,6 +12,7 @@ import {
 } from './types';
 import { loadCustomPresets } from './utils/load-custom-presets';
 import { serverRequire } from './utils/interpret-require';
+import { loadPreviewOrConfigFile } from './utils/load-preview-or-config-file';
 
 const isObject = (val: unknown): val is Record<string, any> =>
   val != null && typeof val === 'object' && Array.isArray(val) === false;
@@ -318,15 +319,15 @@ const getFrameworkPackage = (configDir: string) => {
   return frameworkPackage;
 };
 
-export function loadAllPresets(
-  options: CLIOptions &
-    LoadOptions &
-    BuilderOptions & {
-      corePresets: string[];
-      overridePresets: string[];
-      frameworkPresets: string[];
-    }
-) {
+export type LoadPresetOptions = CLIOptions &
+  LoadOptions &
+  BuilderOptions & {
+    corePresets: string[];
+    overridePresets: string[];
+    frameworkPresets: string[];
+  };
+
+export function loadAllPresets(options: LoadPresetOptions) {
   const { corePresets = [], frameworkPresets = [], overridePresets = [], ...restOptions } = options;
 
   const frameworkPackage = getFrameworkPackage(options.configDir);
@@ -347,3 +348,18 @@ export function loadAllPresets(
 
   return getPresets(filteredPresetConfig, restOptions);
 }
+
+export const getAllPresets = async (configDir: string) => {
+  const presets = loadAllPresets({
+    configDir,
+  } as LoadPresetOptions);
+
+  const configs = [
+    // load addon presets
+    ...(await presets.apply('config', [], { configDir })),
+    // load preview.js
+    loadPreviewOrConfigFile({ configDir }),
+  ].map((configPath) => relative(configDir, configPath));
+
+  return configs;
+};

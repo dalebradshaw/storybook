@@ -8,6 +8,7 @@ import { initiate } from './initiate';
 import { add } from './add';
 import { migrate } from './migrate';
 import { extract } from './extract';
+import { writeAnnotationsFile } from './generate-annotations';
 import { upgrade } from './upgrade';
 import { repro } from './repro';
 import { link } from './link';
@@ -95,6 +96,17 @@ program
   .description('extract stories.json from a built version')
   .action((location = 'storybook-static', output = path.join(location, 'stories.json')) =>
     extract(location, output).catch((e) => {
+      logger.error(e);
+      process.exit(1);
+    })
+  );
+
+program
+  .command('generate-presets')
+  .description('generate a preset-annotations.js from storybok and addons')
+  .option('--config-dir', 'storybook config directory', '.storybook')
+  .action((options) =>
+    writeAnnotationsFile(options.configDir).catch((e) => {
       logger.error(e);
       process.exit(1);
     })
